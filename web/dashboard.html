@@ -1,5 +1,7 @@
 <html>
 
+<link rel='stylesheet' type='text/css' href='dashboard.css'></link>
+
 <script type='text/javascript' src='jquery-2.1.1.js'></script>
 <script type='text/javascript' src='jquery.flot.js'></script>
 <script type='text/javascript' src='jquery.flot.time.js'></script>
@@ -36,7 +38,7 @@ DataView.prototype.draw = function() {
 function create_view(title, name) {
     $('#dashboard').append(
         '<h3>' + title + '</h3>'
-        + '<div id="plot-' + name + '" class="data-plot" style="width: 480px; height: 200px"></div>'
+        + '<div id="plot-' + name + '" class="data-plot"></div>'
     );
     return new DataView(name);
 }

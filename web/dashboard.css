@@ -1,4 +1,21 @@
-.data-plot {
+div.data-plot div.plot {
     width: 480px;
     height: 200px;
+}
+
+div.data-plot div.title {
+    font-weight: bold;
+    font-size: x-large;
+}
+
+div.data-plot#panel-light div.title::before {
+    content: 'Light';
+}
+
+div.data-plot#panel-temperature div.title::before {
+    content: 'Temperature';
+}
+
+div.data-plot#panel-humidity div.title::before {
+    content: 'Humidity';
 }

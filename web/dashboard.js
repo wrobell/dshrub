@@ -27,10 +27,12 @@ DataView.prototype.draw = function() {
     this.plot.draw();
 }
 
-function create_view(title, name) {
+function create_view(name) {
     $('#dashboard').append(
-        '<h3>' + title + '</h3>'
-        + '<div id="plot-' + name + '" class="data-plot"></div>'
+        '<div id="panel-' + name + '" class="data-plot">'
+        + '<div class="title"></div>'
+        + '<div id="plot-' + name + '" class="plot"></div>'
+        + '</div>'
     );
     return new DataView(name);
 }

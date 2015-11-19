@@ -4,12 +4,10 @@
 <script type='text/javascript' src='jquery.flot.js'></script>
 <script type='text/javascript' src='jquery.flot.time.js'></script>
 <script type='text/javascript'>
-
-$(document).ready(function() {
-    var source = new EventSource('/data');
-    var plots = new Array();
-    var plot_data = new Array();
-    var plot_params = {
+function DataView(name) {
+    this.name = name;
+    this.div_id = '#plot-' + name;
+    this.plot_params = {
         xaxis: {mode: 'time'},
         'shadowSize': 0,
         'points': {
@@ -19,29 +17,45 @@ $(document).ready(function() {
             'radius': 2,
         },
     };
-    plots['temperature'] = $.plot($('#plot-temperature'), [[]], plot_params);
-    //plots['light'] = $.plot($('#plot-light'), [[]], plot_params);
-    plots['humidity'] = $.plot($('#plot-humidity'), [[]], plot_params);
+    this.plot = $.plot($('#plot-' + name), [[]], this.plot_params);
+    this.data = new Array();
+}
 
-    plots['temperature'].draw();
-    plots['humidity'].draw();
-    plot_data['temperature'] = [[]];
-    plot_data['humidity'] = [[]];
+DataView.prototype.add = function(x, y) {
+    this.data.push([x, y]);
+    if (this.data.length > 24 * 3600)
+        this.data.shift();
+}
+
+DataView.prototype.draw = function() {
+    this.plot.setData([this.data]);
+    this.plot.setupGrid();
+    this.plot.draw();
+}
+
+function create_view(title, name) {
+    $('#dashboard').append(
+        '<h3>' + title + '</h3>'
+        + '<div id="plot-' + name + '" class="data-plot" style="width: 480px; height: 200px"></div>'
+    );
+    return new DataView(name);
+}
+
+$(document).ready(function() {
+    var source = new EventSource('/data');
+    var plots = new Array();
+    //plots['temperature'] = create_view('Temperature', 'temperature');
+    plots['light'] = create_view('Light', 'light');
+    plots['humidity'] = create_view('Humidity', 'humidity');
 
     source.onmessage = function (event) {
         value = JSON.parse(event.data);
         name = value['name'];
         plot = plots[name];
-        data = plot_data[name];
 
         x = new Date(value['time'] * 1000);
         y = value['value'];
-        data.push([x, y]);
-        if (data.length > 24 * 3600)
-            data.shift();
-
-        plot.setData([data]);
-        plot.setupGrid();
+        plot.add(x, y);
         plot.draw();
     };
 })
@@ -49,9 +63,7 @@ $(document).ready(function() {
 </script>
 
 <body>
-<h3>Temperature</h3>
-<div id='plot-temperature' style='width: 480px; height: 200px'></div>
-<h3>Humidity</h3>
-<div id='plot-humidity' style='width: 480px; height: 200px'></div>
+<div id='dashboard'>
+</div>
 </body>
 </html>

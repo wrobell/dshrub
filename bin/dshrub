@@ -45,6 +45,7 @@ parser.add_argument(
 )
 parser.add_argument('--replay', dest='replay', help='data file to replay')
 parser.add_argument('device', help='sensor device to connect to')
+parser.add_argument('sensors', nargs='+', help='list of sensor to read')
 args = parser.parse_args()
 
 if args.verbose:
@@ -54,8 +55,9 @@ else:
 
 import dshrub.core
 dshrub.core.start(
-    args.device, dashboard=args.dashboard, data_dir=args.data_dir,
-    rotate=args.rotate, channel=args.channel, replay=args.replay
+    args.device, args.sensors, dashboard=args.dashboard,
+    data_dir=args.data_dir, rotate=args.rotate, channel=args.channel,
+    replay=args.replay,
 )
 
 # vim: sw=4:et:ai

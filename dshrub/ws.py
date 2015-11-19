@@ -20,10 +20,19 @@
 import tornado.web
 import tawf
 
-def create_app(topic, path, host='0.0.0.0', port=8090):
+def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
     app = tawf.Application([
         (r'/(.*)', tornado.web.StaticFileHandler, {'path': path}),
     ])
+
+    config = {
+        'refresh': refresh,
+        'data': sensors,
+    }
+
+    @app.route('/conf', mimetype='application/json')
+    def conf():
+        return config
 
     @app.sse('/data', mimetype='application/json')
     def data(callback):
@@ -31,7 +40,7 @@ def create_app(topic, path, host='0.0.0.0', port=8090):
         while True:
             data = yield from topic.get()
             items.extend(v for v in data)
-            if items[-1].time - items[0].time >= 60:
+            if items[-1].time - items[0].time >= refresh:
                 for item in items:
                     callback(item._asdict())
                 del items[:]

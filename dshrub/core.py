@@ -30,26 +30,28 @@ from .ws import create_app
 logger = logging.getLogger(__name__)
 
 
-def start(device, dashboard=None, data_dir=None, rotate=None, channel=None,
-        replay=None):
+def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
+        channel=None, replay=None):
 
     topic = n23.Topic()
     if dashboard:
-        create_app(topic, dashboard)
+        create_app(sensors, topic, dashboard)
 
     files = None
     if data_dir:
         files = n23.data_logger_file('dshrub', data_dir)
 
     w = n23.cycle(
-        rotate, workflow, topic, device, files=files, channel=channel,
-        replay=replay
+        rotate, workflow, topic, device, sensors, files=files,
+        channel=channel, replay=replay
     )
     loop = asyncio.get_event_loop()
     loop.run_until_complete(w)
 
 
-def workflow(topic, device, files=None, channel=None, replay=None):
+def workflow(topic, device, sensors, files=None, channel=None,
+        replay=None):
+
     scheduler = n23.Scheduler(1, timeout=0.25)
     fout = next(files) if files else None
 
@@ -58,10 +60,7 @@ def workflow(topic, device, files=None, channel=None, replay=None):
         fin = h5py.File(replay)
 
         # for each sensor
-        names = list(v[0] for v in fin.items())
-        if __debug__:
-            logger.debug('found data for sensors: {}'.format(names))
-        for name in names:
+        for name in sensors:
             data_log = n23.data_logger(fout, name, 60) if fout else None
             consume = n23.split(topic.put_nowait, data_log)
             scheduler.add(name, replay_file(fin, name), consume)
@@ -80,9 +79,12 @@ def workflow(topic, device, files=None, channel=None, replay=None):
         next(r_hum)
         logger.info('connected to sensor {}'.format(device))
 
-        names = ['temperature', 'humidity']
-        readers = [read_temp, read_hum]
-        for name, s_read in zip(names, readers):
+        readers = {
+            'temperature': read_temp,
+            'humidity': read_hum,
+        }
+        items = ((k, v) for k, v in readers.items() if k in sensors)
+        for name, s_read in items:
             data_log = n23.data_logger(fout, name, 60) if fout else None
             consume = n23.split(topic.put_nowait, data_log)
             scheduler.add(name, s_read, consume)

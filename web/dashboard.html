@@ -8,22 +8,34 @@
 <script type='text/javascript' src='dashboard.js'></script>
 <script type='text/javascript'>
 $(document).ready(function() {
-    var source = new EventSource('/data');
     var plots = new Array();
-    //plots['temperature'] = create_view('Temperature', 'temperature');
-    plots['light'] = create_view('Light', 'light');
-    plots['humidity'] = create_view('Humidity', 'humidity');
 
-    source.onmessage = function (event) {
-        value = JSON.parse(event.data);
-        name = value['name'];
-        plot = plots[name];
+    $.ajax('/conf')
+        .done(function(config) {
+            console.log('loaded config')
+            source = new EventSource('/data');
 
-        x = new Date(value['time'] * 1000);
-        y = value['value'];
-        plot.add(x, y);
-        plot.draw();
-    };
+            for (var i = 0; i < config['data'].length; i++) {
+                name = config['data'][i];
+                plots[name] = create_view(name, name);
+                console.log('added plot for ' + name);
+            }
+
+            source.onmessage = function (event) {
+                value = JSON.parse(event.data);
+                name = value['name'];
+                plot = plots[name];
+
+                if (plot === undefined) {
+                    console.log('no data feed configured for ' + name);
+                } else {
+                    x = new Date(value['time'] * 1000);
+                    y = value['value'];
+                    plot.add(x, y);
+                    plot.draw();
+                }
+            };
+        });
 })
 
 </script>

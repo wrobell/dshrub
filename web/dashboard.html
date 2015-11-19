@@ -17,7 +17,7 @@ $(document).ready(function() {
 
             for (var i = 0; i < config['data'].length; i++) {
                 name = config['data'][i];
-                plots[name] = create_view(name, name);
+                plots[name] = create_view(name);
                 console.log('added plot for ' + name);
             }
 

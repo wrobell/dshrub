@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+#
+# DShrub - sensor data application.
+#
+# Copyright (C) 2015 by Artur Wroblewski <wrobell@pld-linux.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+"""
+Start dashboard on HTTP server and read data from Redis channel.
+"""
+
+import argparse
+import logging
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '-v', '--verbose', action='store_true', dest='verbose', default=False,
+        help='explain what is being done'
+)
+parser.add_argument('dashboard', help='dashboard directory')
+parser.add_argument('channel', help='redis channel to read data from')
+args = parser.parse_args()
+
+if args.verbose:
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    logging.basicConfig(level=logging.WARN)
+
+
+import asyncio
+
+import aioredis
+import tornado.web
+import tawf
+
+logger = logging.getLogger(__name__)
+
+app = tawf.Application([
+    (r'/(.*)', tornado.web.StaticFileHandler, {'path': args.dashboard}),
+])
+
+@app.sse('/data')
+def data(callback):
+    client = yield from aioredis.create_redis(('localhost', 6379))
+    channel, = yield from client.subscribe(args.channel)
+
+    if __debug__:
+        logger.debug('connected to redis server')
+
+    while True:
+        data = yield from channel.get()
+        callback(data)
+
+app.listen(8090, address='0.0.0.0')
+loop = asyncio.get_event_loop()
+loop.run_forever()
+
+# vim: sw=4:et:ai

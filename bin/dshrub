@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+#
+# DShrub - sensor data application.
+#
+# Copyright (C) 2015 by Artur Wroblewski <wrobell@pld-linux.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+import argparse
+import logging
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '-v', '--verbose', action='store_true', dest='verbose', default=False,
+        help='explain what is being done'
+)
+parser.add_argument(
+    '-w', '--dashboard', dest='dashboard',
+    help='server dashboard application from the directory DASHBOARD'
+)
+parser.add_argument(
+    '-d', '--data-dir', dest='data_dir',
+    help='enable data logging in the directory'
+)
+parser.add_argument(
+    '-r', '--rotate', dest='rotate', type=int, default=3600,
+    help='rotate data log file every ROTATE seconds (default 3600s); ' \
+        'set to 0 to disable'
+)
+parser.add_argument(
+    '-c', '--channel', dest='channel',
+    help='send data to Redis channel CHANNEL'
+)
+parser.add_argument('--replay', dest='replay', help='data file to replay')
+parser.add_argument('device', help='sensor device to connect to')
+args = parser.parse_args()
+
+if args.verbose:
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    logging.basicConfig(level=logging.WARN)
+
+import dshrub.core
+dshrub.core.start(
+    args.device, dashboard=args.dashboard, data_dir=args.data_dir,
+    rotate=args.rotate, channel=args.channel, replay=args.replay
+)
+
+# vim: sw=4:et:ai

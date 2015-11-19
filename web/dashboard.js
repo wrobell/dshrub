@@ -40,4 +40,17 @@ function create_view(name) {
     return new DataView(name);
 }
 
+function plot_add_item(plot, item) {
+    x = new Date(item['time'] * 1000);
+    y = item['value'];
+    plot.add(x, y);
+    plot.draw();
+}
+
+function panel_set_item_value(name, item) {
+    $('div#panel-' + name + ' div.value').html(
+        Math.round(item['value'] * 10) / 10
+    );
+}
+
 // vim: sw=4:et:ai

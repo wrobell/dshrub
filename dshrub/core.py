@@ -25,7 +25,7 @@ import logging
 import h5py
 import n23
 
-from .ws import create_app
+from . import ws
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,9 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
 
     topic = n23.Topic()
     if dashboard:
-        create_app(sensors, topic, dashboard)
+        last_data = ws.create_app(sensors, topic, dashboard)
+    else:
+        last_data = None
 
     files = None
     if data_dir:
@@ -43,14 +45,14 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
 
     w = n23.cycle(
         rotate, workflow, topic, device, sensors, files=files,
-        channel=channel, replay=replay
+        channel=channel, replay=replay, last_data=last_data
     )
     loop = asyncio.get_event_loop()
     loop.run_until_complete(w)
 
 
 def workflow(topic, device, sensors, files=None, channel=None,
-        replay=None):
+        replay=None, last_data=None):
 
     scheduler = n23.Scheduler(1, timeout=0.25)
     fout = next(files) if files else None
@@ -95,6 +97,10 @@ def workflow(topic, device, sensors, files=None, channel=None,
         p = publish(topic, channel)
         tasks.append(p)
         logger.info('publish data to redis channel {}'.format(channel))
+
+    if last_data:
+        t = ws.keep_data(topic, last_data)
+        tasks.append(t)
 
     return asyncio.gather(*tasks)
 

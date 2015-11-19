@@ -17,6 +17,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import asyncio
+from collections import deque
+
 import tornado.web
 import tawf
 
@@ -30,9 +33,15 @@ def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
         'data': sensors,
     }
 
+    last_data = {s: deque([], 3600 * 24) for s in sensors}
+
     @app.route('/conf', mimetype='application/json')
     def conf():
         return config
+
+    @app.route('/data/last/{sensor}', mimetype='application/json')
+    def data(sensor):
+        return list(last_data[sensor])
 
     @app.sse('/data', mimetype='application/json')
     def data(callback):
@@ -40,13 +49,21 @@ def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
         while True:
             data = yield from topic.get()
             items.extend(v for v in data)
-            if items[-1].time - items[0].time >= refresh:
+            if round(items[-1].time - items[0].time) >= refresh:
                 for item in items:
                     callback(item._asdict())
                 del items[:]
 
     app.listen(port, address=host)
 
-    return app
+    return last_data
+
+
+@asyncio.coroutine
+def keep_data(topic, last_data):
+    while True:
+        items = yield from topic.get()
+        for item in items:
+            last_data[item.name].append(item._asdict())
 
 # vim: sw=4:et:ai

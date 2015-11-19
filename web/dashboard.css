@@ -1,3 +1,15 @@
+div.data-plot > div {
+    display: flex;
+}
+
+div.data-plot > div > div.value {
+    text-align: center;
+    margin-top: auto;
+    margin-bottom: auto;
+    width: 160;
+    font-size: 64px;
+}
+
 div.data-plot div.plot {
     width: 480px;
     height: 200px;

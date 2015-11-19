@@ -33,6 +33,10 @@ $(document).ready(function() {
                     y = value['value'];
                     plot.add(x, y);
                     plot.draw();
+
+                    $('div#panel-' + name + ' div.value').html(
+                        Math.round(y * 10) / 10
+                    );
                 }
             };
         });

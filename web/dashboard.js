@@ -31,7 +31,10 @@ function create_view(name) {
     $('#dashboard').append(
         '<div id="panel-' + name + '" class="data-plot">'
         + '<div class="title"></div>'
+        + '<div>'
+        + '<div class="value"></div>'
         + '<div id="plot-' + name + '" class="plot"></div>'
+        + '</div>'
         + '</div>'
     );
     return new DataView(name);

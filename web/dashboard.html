@@ -17,19 +17,11 @@ $(document).ready(function() {
             for (var i = 0; i < config['data'].length; i++) {
                 name = config['data'][i];
                 plot = create_view(name);
-                response = $.ajax({
+                $.ajax({
                     url: '/data/last/' + name,
                     name: name,
                     plot: plot,
-                    success: function(data) {
-                        console.log(
-                            'received initial data for ' + this.name + ', size=' + data.length
-                        );
-                        for (var j = 0; j < data.length; j++)
-                            plot_add_item(this.plot, data[j]);
-                        panel_set_item_value(this.name, data[data.length - 1]);
-                        this.plot.draw();
-                    }
+                    success: panel_initial_data
                 });
 
                 plots[name] = plot;
@@ -47,6 +39,7 @@ $(document).ready(function() {
                 else {
                     plot_add_item(plot, value);
                     panel_set_item_value(name, value);
+                    plot.draw();
                 }
             };
         });

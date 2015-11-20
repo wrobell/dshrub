@@ -44,13 +44,26 @@ function plot_add_item(plot, item) {
     x = new Date(item['time'] * 1000);
     y = item['value'];
     plot.add(x, y);
-    plot.draw();
 }
 
 function panel_set_item_value(name, item) {
     $('div#panel-' + name + ' div.value').html(
         Math.round(item['value'] * 10) / 10
     );
+}
+
+function panel_initial_data(data) {
+    size = data.length;
+    console.log(
+        'received initial data for ' + this.name + ', size=' + size
+    );
+    plot = this.plot;
+    data.forEach(function(item, index, data) {
+        plot_add_item(plot, item);
+    });
+    if (size > 0)
+        panel_set_item_value(this.name, data[size - 1]);
+    this.plot.draw();
 }
 
 // vim: sw=4:et:ai

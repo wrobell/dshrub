@@ -10,15 +10,16 @@
 $(document).ready(function() {
     var plots = new Array();
 
-    $.ajax('/conf')
-        .done(function(config) {
+    $.ajax({
+        url: '/conf',
+        success: function(config) {
             console.log('loaded config')
 
             for (var i = 0; i < config['data'].length; i++) {
                 name = config['data'][i];
                 plot = create_view(name);
                 $.ajax({
-                    url: '/data/last/' + name,
+                    url: '/data/' + name,
                     name: name,
                     plot: plot,
                     success: panel_initial_data
@@ -42,7 +43,8 @@ $(document).ready(function() {
                     plot.draw();
                 }
             };
-        });
+        }
+    });
 })
 
 </script>

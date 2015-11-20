@@ -39,7 +39,7 @@ def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
     def conf():
         return config
 
-    @app.route('/data/last/{sensor}', mimetype='application/json')
+    @app.route('/data/{sensor}', mimetype='application/json')
     def data(sensor):
         return list(last_data[sensor])
 

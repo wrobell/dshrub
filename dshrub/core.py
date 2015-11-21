@@ -72,9 +72,13 @@ def workflow(topic, device, sensors, files=None, channel=None,
         logger.info('connecting to sensor {}'.format(device))
         dev = braitebt.connect(device)
         r_temp = braitebt.read_temperature(dev)
+        r_pressure = braitebt.read_pressure(dev)
         r_hum = braitebt.read_humidity(dev)
+        r_light = braitebt.read_light(dev)
         read_temp = functools.partial(next, r_temp)
+        read_pressure = functools.partial(next, r_pressure)
         read_hum = functools.partial(next, r_hum)
+        read_light = functools.partial(next, r_light)
 
         # FIXME: first read is long, n23 needs to deal with it nicely
         next(r_temp)
@@ -83,7 +87,9 @@ def workflow(topic, device, sensors, files=None, channel=None,
 
         readers = {
             'temperature': read_temp,
+            'pressure': read_pressure,
             'humidity': read_hum,
+            'light': read_light,
         }
         items = ((k, v) for k, v in readers.items() if k in sensors)
         for name, s_read in items:

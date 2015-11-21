@@ -33,7 +33,7 @@ parser.add_argument(
 parser.add_argument('dashboard', help='dashboard directory')
 parser.add_argument('channel', help='redis channel to read data from')
 parser.add_argument(
-    'sensors', help='list of sensors for which data is expected'
+    'sensors', nargs='+', help='list of sensors for which data is expected'
 )
 args = parser.parse_args()
 
@@ -62,13 +62,13 @@ config = {
     'data': args.sensors,
 }
 
-last_data = {s: deque([], 3600 * 24) for s in sensors}
+last_data = {s: deque([], 3600 * 4) for s in args.sensors}
 
 @app.route('/conf', mimetype='application/json')
 def conf():
     return config
 
-@app.route('/data/last/{sensor}', mimetype='application/json')
+@app.route('/data/{sensor}', mimetype='application/json')
 def data(sensor):
     return list(last_data[sensor])
 

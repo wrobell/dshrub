@@ -35,7 +35,7 @@ def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
 
     last_data = {s: deque([], 3600 * 24) for s in sensors}
 
-    @app.route('/conf', mimetype='application/json')
+    @app.route('/data', method=tawf.Method.OPTIONS, mimetype='application/json')
     def conf():
         return config
 

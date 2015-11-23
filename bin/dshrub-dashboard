@@ -64,7 +64,7 @@ config = {
 
 last_data = {s: deque([], 3600 * 4) for s in args.sensors}
 
-@app.route('/conf', mimetype='application/json')
+@app.route('/data', tawf.Method.OPTIONS, mimetype='application/json')
 def conf():
     return config
 

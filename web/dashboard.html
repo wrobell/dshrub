@@ -11,7 +11,8 @@ $(document).ready(function() {
     var plots = new Array();
 
     $.ajax({
-        url: '/conf',
+        url: '/data',
+        method: 'OPTIONS',
         success: function(config) {
             console.log('loaded config')
 

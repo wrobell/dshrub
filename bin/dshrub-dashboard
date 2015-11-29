@@ -80,9 +80,12 @@ def data(callback):
     if __debug__:
         logger.debug('connected to redis server')
 
-    while True:
-        data = yield from channel.get()
-        callback(data.decode())
+    try:
+        while True:
+            data = yield from channel.get()
+            callback(data.decode())
+    finally:
+        client.close()
 
 
 @asyncio.coroutine
@@ -93,10 +96,13 @@ def data_keeper(last_data):
     if __debug__:
         logger.debug('connected to redis server')
 
-    while True:
-        data = yield from channel.get()
-        item = json.loads(data.decode())
-        last_data[item['name']].append(item)
+    try:
+        while True:
+            data = yield from channel.get()
+            item = json.loads(data.decode())
+            last_data[item['name']].append(item)
+    finally:
+        client.close()
 
 
 app.listen(8090, address='0.0.0.0')

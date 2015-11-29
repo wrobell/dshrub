@@ -122,10 +122,13 @@ def publish(topic, name):
     client = yield from aioredis.create_redis(('localhost', 6379))
     if __debug__:
         logger.debug('connected to redis server')
-    while True:
-        values = yield from topic.get()
-        for v in values:
-            client.publish_json(name, v._asdict())
+    try:
+        while True:
+            values = yield from topic.get()
+            for v in values:
+                client.publish_json(name, v._asdict())
+    finally:
+        client.close()
 
 
 # vim: sw=4:et:ai

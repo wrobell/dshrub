@@ -73,16 +73,16 @@ def data(sensor):
     return list(last_data[sensor])
 
 @app.sse('/data')
-def data(callback):
-    client = yield from aioredis.create_redis(('localhost', 6379))
-    channel, = yield from client.subscribe(args.channel)
+async def data(callback):
+    client = await aioredis.create_redis(('localhost', 6379))
+    channel, = await client.subscribe(args.channel)
 
     if __debug__:
         logger.debug('connected to redis server')
 
     try:
         while True:
-            data = yield from channel.get()
+            data = await channel.get()
             callback(data.decode())
     finally:
         client.close()

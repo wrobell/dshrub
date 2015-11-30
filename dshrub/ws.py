@@ -44,10 +44,10 @@ def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
         return list(last_data[sensor])
 
     @app.sse('/data', mimetype='application/json')
-    def data(callback):
+    async def data(callback):
         items = []
         while True:
-            data = yield from topic.get()
+            data = await topic.get()
             items.extend(v for v in data)
             if round(items[-1].time - items[0].time) >= refresh:
                 for item in items:

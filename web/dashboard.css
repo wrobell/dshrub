@@ -21,22 +21,22 @@ div.data-plot div.title {
 }
 
 div.data-plot#panel-temperature div.title::before {
-    content: 'Temperature';
+    content: 'Temperature [\2103]';
 }
 
 div.data-plot#panel-pressure div.title::before {
-    content: 'Pressure';
+    content: 'Pressure [Pa]';
 }
 div.data-plot#panel-pressure > div > div.value {
     font-size: 48px;
 }
 
 div.data-plot#panel-humidity div.title::before {
-    content: 'Humidity';
+    content: 'Humidity [%RH]';
 }
 
 div.data-plot#panel-light div.title::before {
-    content: 'Light';
+    content: 'Light [lx]';
 }
 
 div.data-plot#panel-light > div > div.value {

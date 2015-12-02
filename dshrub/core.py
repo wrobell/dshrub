@@ -67,22 +67,15 @@ def workflow(topic, device, sensors, files=None, channel=None,
             consume = n23.split(topic.put_nowait, data_log)
             scheduler.add(name, replay_file(fin, name), consume)
     else:
-        import braitebt
+        import btzen
 
         logger.info('connecting to sensor {}'.format(device))
-        dev = braitebt.connect(device)
-        r_temp = braitebt.read_temperature(dev)
-        r_pressure = braitebt.read_pressure(dev)
-        r_hum = braitebt.read_humidity(dev)
-        r_light = braitebt.read_light(dev)
-        read_temp = functools.partial(next, r_temp)
-        read_pressure = functools.partial(next, r_pressure)
-        read_hum = functools.partial(next, r_hum)
-        read_light = functools.partial(next, r_light)
+        dev = btzen.connect(device)
+        read_temp = btzen.Temperature(dev)
+        read_pressure = btzen.Pressure(dev)
+        read_hum = btzen.Humidity(dev)
+        read_light = btzen.Light(dev)
 
-        # FIXME: first read is long, n23 needs to deal with it nicely
-        next(r_temp)
-        next(r_hum)
         logger.info('connected to sensor {}'.format(device))
 
         readers = {
@@ -92,10 +85,10 @@ def workflow(topic, device, sensors, files=None, channel=None,
             'light': read_light,
         }
         items = ((k, v) for k, v in readers.items() if k in sensors)
-        for name, s_read in items:
+        for name, reader in items:
             data_log = n23.data_logger(fout, name, 60) if fout else None
             consume = n23.split(topic.put_nowait, data_log)
-            scheduler.add(name, s_read, consume)
+            scheduler.add(name, reader.read, consume)
 
 
     tasks = [scheduler()]

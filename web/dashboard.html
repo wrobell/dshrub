@@ -39,7 +39,6 @@ $(document).ready(function() {
                 if (plot === undefined)
                     console.log('no data feed configured for ' + name);
                 else {
-                    plot_add_item(plot, value);
                     panel_set_item_value(name, value);
                     plot.draw();
                 }

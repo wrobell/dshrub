@@ -41,8 +41,8 @@ function create_view(name) {
 }
 
 function plot_add_item(plot, item) {
-    x = new Date(item['time'] * 1000);
-    y = item['value'];
+    x = new Date(item[0] * 1000);
+    y = item[1];
     plot.add(x, y);
 }
 

@@ -23,6 +23,11 @@ from collections import deque
 import tornado.web
 import tawf
 
+from .data import bin_data, read_data
+
+# how much data items to keep in memory per sensor, default 24h of data
+N_DATA = 3600 * 24
+
 def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
     app = tawf.Application([
         (r'/(.*)', tornado.web.StaticFileHandler, {'path': path}),
@@ -33,7 +38,8 @@ def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
         'data': sensors,
     }
 
-    last_data = {s: deque([], 3600 * 24) for s in sensors}
+    last_data = {s: deque([], N_DATA) for s in sensors}
+    # read_data(preload_file, sensors, N_DATA, last_data)
 
     @app.route('/data', tawf.Method.OPTIONS, mimetype='application/json')
     def conf():
@@ -41,29 +47,19 @@ def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
 
     @app.route('/data/{sensor}', mimetype='application/json')
     def data(sensor):
-        return list(last_data[sensor])
+        data = last_data[sensor]
+        return bin_data(data, 'mean', 480)
 
     @app.sse('/data', mimetype='application/json')
     async def data(callback):
-        items = []
         while True:
-            data = await topic.get()
-            items.extend(v for v in data)
-            if round(items[-1].time - items[0].time) >= refresh:
-                for item in items:
-                    callback(item._asdict())
-                del items[:]
+            items = await topic.get()
+            for item in items:
+                callback(item._asdict())
 
     app.listen(port, address=host)
 
     return last_data
 
-
-@asyncio.coroutine
-def keep_data(topic, last_data):
-    while True:
-        items = yield from topic.get()
-        for item in items:
-            last_data[item.name].append(item._asdict())
 
 # vim: sw=4:et:ai

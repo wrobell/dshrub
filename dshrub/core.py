@@ -19,13 +19,13 @@
 
 import asyncio
 import functools
-import itertools
 import logging
 
 import h5py
 import n23
 
 from . import ws
+from .data import data_keeper, replay_file
 
 logger = logging.getLogger(__name__)
 
@@ -98,15 +98,10 @@ def workflow(topic, device, sensors, files=None, channel=None,
         logger.info('publish data to redis channel {}'.format(channel))
 
     if last_data:
-        t = ws.keep_data(topic, last_data)
+        t = data_keeper(topic, last_data)
         tasks.append(t)
 
     return asyncio.gather(*tasks)
-
-
-def replay_file(f, group_name):
-    data = itertools.cycle(f[group_name + '/data'])
-    return lambda: float(next(data)[0])
 
 
 @asyncio.coroutine

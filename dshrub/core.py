@@ -25,19 +25,22 @@ import h5py
 import n23
 
 from . import ws
-from .data import data_keeper, replay_file
+from .data import Cache, cache_data, replay_file
+from .redis import publish
 
 logger = logging.getLogger(__name__)
-
 
 def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
         channel=None, replay=None):
 
     topic = n23.Topic()
+
     if dashboard:
-        last_data = ws.create_app(sensors, topic, dashboard)
+        cache = Cache(sensors)
+        # read_data(preload_file, sensors, N_DATA, cache)
+        ws.create_app(sensors, topic, cache, dashboard)
     else:
-        last_data = None
+        cache = None
 
     files = None
     if data_dir:
@@ -45,14 +48,14 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
 
     w = n23.cycle(
         rotate, workflow, topic, device, sensors, files=files,
-        channel=channel, replay=replay, last_data=last_data
+        channel=channel, replay=replay, cache=cache
     )
     loop = asyncio.get_event_loop()
     loop.run_until_complete(w)
 
 
 def workflow(topic, device, sensors, files=None, channel=None,
-        replay=None, last_data=None):
+        replay=None, cache=None):
 
     scheduler = n23.Scheduler(1, timeout=0.25)
     fout = next(files) if files else None
@@ -97,26 +100,11 @@ def workflow(topic, device, sensors, files=None, channel=None,
         tasks.append(p)
         logger.info('publish data to redis channel {}'.format(channel))
 
-    if last_data:
-        t = data_keeper(topic, last_data)
+    if cache:
+        t = cache_data(topic.get, cache)
         tasks.append(t)
 
     return asyncio.gather(*tasks)
-
-
-@asyncio.coroutine
-def publish(topic, name):
-    import aioredis
-    client = yield from aioredis.create_redis(('localhost', 6379))
-    if __debug__:
-        logger.debug('connected to redis server')
-    try:
-        while True:
-            values = yield from topic.get()
-            for v in values:
-                client.publish_json(name, v._asdict())
-    finally:
-        client.close()
 
 
 # vim: sw=4:et:ai

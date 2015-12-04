@@ -22,13 +22,17 @@ Sensor data processing functions.
 """
 
 import asyncio
+import functools
 import h5py
 import itertools
 import math
 
 from collections import deque
+from n23.core import Data
 from scipy.stats import binned_statistic
 
+# how much data items to keep in memory per sensor, default 24h of data
+N_DATA = 3600 * 24
 
 def bin_data(data, agg, bins):
     """
@@ -47,22 +51,16 @@ def bin_data(data, agg, bins):
     return data
 
 
-async def data_keeper(topic, data):
+async def cache_data(callable, cache):
     """
-    Receive sensor data item from topic and store it in data storage
-    structure.
+    Receive sensor data item from coroutine and store it in data cache.
 
-    Data storage structure is a dictionary with `(name, queue)` pairs,
-    where name is name of a sensor and queue holds sensor data values.
-    Sensor data value consists of a pair `(time, value)`.
-
-    :param topic: Topic providing sensor data items. 
-    :param data: Data storage structure.
+    :param callable: Coroutine to receive sensor data.
+    :param cache: Sensor data cache.
     """
     while True:
-        items = await topic.get()
-        for item in items:
-            data[item.name].append([item.time, item.value])
+        item = await callable()
+        cache.add(item)
 
 
 def replay_file(f, sensor):
@@ -86,5 +84,79 @@ def read_data(fn, sensors, n, data):
             if not math.isnan(t[0])
         )
     f.close()
+
+
+def dispatch(func):
+    """
+    Like `functools.singledispatch` but for class methods.
+
+    http://stackoverflow.com/a/24602374/722424
+    """
+    dispatcher = functools.singledispatch(func)
+    def wrapper(*args, **kw):
+        return dispatcher.dispatch(args[1].__class__)(*args, **kw)
+    wrapper.register = dispatcher.register
+    functools.update_wrapper(wrapper, func)
+    return wrapper
+
+
+class Cache:
+    """
+    Senor data cache.
+
+    Sensor data is kept in dictionary consisting of `(name, queue)` pairs,
+    where `name` is name of a sensor and queue holds sensor data values.
+    Sensor data value consists of a pair `(time, value)`.
+    """
+    def __init__(self, sensors, maxsize=N_DATA):
+        """
+        Create sensor data cach.
+
+        :param sensors: List of sensors.
+        :param maxsize: Maximum number of values kept per sensor.
+        """
+        self._cache = {s: deque([], maxsize) for s in sensors}
+
+
+    @dispatch
+    def add(self, item):
+        """
+        Add sensor data value.
+
+        Sensor data item can be
+
+        - `n23.core.Data` sensor data value
+        - dictionary compatible with `n23.core.Data` class
+        - list of above objects
+
+        :param item: Sensor data item.
+        """
+        raise NotImplementedError('Not implemented for {}'.format(type(item)))
+
+
+    def __getitem__(self, name):
+        return self._cache[name]
+
+
+    @add.register(Data)
+    def _add(self, item):
+        self._add_value(item.name, item.time, item.value)
+
+
+    @add.register(dict)
+    def _add(self, item):
+        self._add_value(item['name'], item['time'], item['value'])
+
+
+    @add.register(deque)
+    @add.register(list)
+    def _add(self, item):
+        for v in item:
+            self.add(v)
+
+
+    def _add_value(self, name, time, value):
+        self._cache[name].append((time, value))
+
 
 # vim: sw=4:et:ai

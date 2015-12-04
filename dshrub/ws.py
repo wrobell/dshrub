@@ -25,10 +25,9 @@ import tawf
 
 from .data import bin_data, read_data
 
-# how much data items to keep in memory per sensor, default 24h of data
-N_DATA = 3600 * 24
+def create_app(sensors, topic, cache, path, refresh=1, host='0.0.0.0',
+        port=8090):
 
-def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
     app = tawf.Application([
         (r'/(.*)', tornado.web.StaticFileHandler, {'path': path}),
     ])
@@ -38,16 +37,13 @@ def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
         'data': sensors,
     }
 
-    last_data = {s: deque([], N_DATA) for s in sensors}
-    # read_data(preload_file, sensors, N_DATA, last_data)
-
     @app.route('/data', tawf.Method.OPTIONS, mimetype='application/json')
     def conf():
         return config
 
     @app.route('/data/{sensor}', mimetype='application/json')
     def data(sensor):
-        data = last_data[sensor]
+        data = cache[sensor]
         return bin_data(data, 'mean', 480)
 
     @app.sse('/data', mimetype='application/json')
@@ -58,8 +54,6 @@ def create_app(sensors, topic, path, refresh=1, host='0.0.0.0', port=8090):
                 callback(item._asdict())
 
     app.listen(port, address=host)
-
-    return last_data
 
 
 # vim: sw=4:et:ai

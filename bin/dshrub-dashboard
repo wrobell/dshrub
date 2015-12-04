@@ -47,9 +47,11 @@ import asyncio
 import json
 from collections import deque
 
-import aioredis
 import tornado.web
 import tawf
+
+from dshrub.data import Cache, bin_data
+from dshrub.redis import Channel
 
 logger = logging.getLogger(__name__)
 
@@ -62,51 +64,35 @@ config = {
     'data': args.sensors,
 }
 
-last_data = {s: deque([], 3600 * 4) for s in args.sensors}
 
 @app.route('/data', tawf.Method.OPTIONS, mimetype='application/json')
 def conf():
     return config
 
+
 @app.route('/data/{sensor}', mimetype='application/json')
 def data(sensor):
-    return list(last_data[sensor])
+    data = cache[sensor]
+    return bin_data(data, 'mean', 480)
+
 
 @app.sse('/data')
 async def data(callback):
-    client = await aioredis.create_redis(('localhost', 6379))
-    channel, = await client.subscribe(args.channel)
-
-    if __debug__:
-        logger.debug('connected to redis server')
-
-    try:
+    async with Channel(args.channel) as channel:
         while True:
             data = await channel.get()
             callback(data.decode())
-    finally:
-        client.close()
 
 
-@asyncio.coroutine
-def data_keeper(last_data):
-    client = yield from aioredis.create_redis(('localhost', 6379))
-    channel, = yield from client.subscribe(args.channel)
-
-    if __debug__:
-        logger.debug('connected to redis server')
-
-    try:
-        while True:
-            data = yield from channel.get()
-            item = json.loads(data.decode())
-            last_data[item['name']].append(item)
-    finally:
-        client.close()
+async def cache_data(cache):
+    from dshrub.data import cache_data
+    async with Channel(args.channel) as channel:
+        await cache_data(channel.get_json, cache)
 
 
+cache = Cache(args.sensors)
 app.listen(8090, address='0.0.0.0')
 loop = asyncio.get_event_loop()
-loop.run_until_complete(data_keeper(last_data))
+loop.run_until_complete(cache_data(cache))
 
 # vim: sw=4:et:ai

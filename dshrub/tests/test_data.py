@@ -23,7 +23,7 @@ Unit tests fo sensor data processing functions.
 
 import asyncio
 from n23.core import Data, Topic
-from dshrub.data import bin_data, data_keeper
+from dshrub.data import bin_data, cache_data, Cache
 
 from .util import patch_async, run_coroutine
 
@@ -45,12 +45,52 @@ def test_bin_data():
     #assert [1.2, 1.4, 1.6] == [v[0] for v in result]
 
 
-def test_keep_data():
+def test_data_cache_store_limit():
     """
-    Test keeping sensor data.
+    Test data cache storing no more than max size items.
+    """
+    cache = Cache(['n'], 2) # store just two items
+    cache.add(Data('n', 1, 10, 101))
+    cache.add(Data('n', 1, 11, 102))
+    cache.add(Data('n', 1, 12, 103))
+    cache.add(Data('n', 1, 13, 104))
+    assert [(12, 103), (13, 104)] == list(cache['n'])
+
+
+def test_data_cache_store_item():
+    """
+    Test data cache storing `n23.core.Data` item.
+    """
+    cache = Cache(['n'])
+    cache.add(Data('n', 1, 10, 101))
+    assert [(10, 101)] == list(cache['n'])
+
+
+def test_data_cache_store_dict():
+    """
+    Test data cache storing dictionary item.
+    """
+    cache = Cache(['n'])
+    cache.add({'name': 'n', 'time': 10, 'value': 101})
+    assert [(10, 101)] == list(cache['n'])
+
+
+def test_data_cache_store_list():
+    """
+    Test data cache storing list of items.
+    """
+    cache = Cache(['n'])
+    cache.add({'name': 'n', 'time': 10, 'value': 101})
+    cache.add(Data('n', 1, 11, 102))
+    assert [(10, 101), (11, 102)] == list(cache['n'])
+
+
+def test_cache_data():
+    """
+    Test sensor data caching coroutine.
     """
     topic = Topic()
-    data = {'test-sensor': []}
+    cache = Cache(['test-sensor'])
     values = [
         Data('test-sensor', 0, 10, 101),
         Data('test-sensor', 0, 11, 102),
@@ -58,10 +98,10 @@ def test_keep_data():
 
     with patch_async(topic, 'get') as f:
         f.side_effect = [values]
-        coro = data_keeper(topic, data)
+        coro = cache_data(f, cache)
         run_coroutine(coro)
 
-    assert [[10, 101], [11, 102]] == data['test-sensor']
+    assert [(10, 101), (11, 102)] == list(cache['test-sensor'])
 
 
 # vim: sw=4:et:ai

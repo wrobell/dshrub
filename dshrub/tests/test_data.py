@@ -22,7 +22,7 @@ Unit tests fo sensor data processing functions.
 """
 
 import asyncio
-from n23.core import Data, Topic
+from n23 import Data, Topic
 from dshrub.data import bin_data, cache_data, Cache
 
 from .util import patch_async, run_coroutine
@@ -59,7 +59,7 @@ def test_data_cache_store_limit():
 
 def test_data_cache_store_item():
     """
-    Test data cache storing `n23.core.Data` item.
+    Test data cache storing `n23.Data` item.
     """
     cache = Cache(['n'])
     cache.add(Data('n', 1, 10, 101))

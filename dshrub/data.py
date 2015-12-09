@@ -28,7 +28,7 @@ import itertools
 import math
 
 from collections import deque
-from n23.core import Data
+from n23 import Data
 from scipy.stats import binned_statistic
 
 # how much data items to keep in memory per sensor, default 24h of data

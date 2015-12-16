@@ -19,9 +19,12 @@
 
 import asyncio
 import functools
-import logging
-
 import h5py
+import logging
+import signal
+import sys
+from contextlib import contextmanager
+
 import n23
 
 from . import ws
@@ -42,59 +45,51 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
     else:
         cache = None
 
+    if replay:
+        logger.info('replaying a data file {}'.format(replay))
+        replay = h5py.File(replay)
+
     files = None
     if data_dir:
-        files = n23.data_logger_file('dshrub', data_dir)
+        files = n23.dlog_filename('dshrub', data_dir)
 
     w = n23.cycle(
         rotate, workflow, topic, device, sensors, files=files,
         channel=channel, replay=replay, cache=cache
     )
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(w)
+    loop.add_signal_handler(signal.SIGTERM, sys.exit)
+    try:
+        loop.run_until_complete(w)
+    finally:
+        loop.remove_signal_handler(signal.SIGTERM)
+        w.close()
 
 
+@contextmanager
 def workflow(topic, device, sensors, files=None, channel=None,
         replay=None, cache=None):
 
-    scheduler = n23.Scheduler(1, timeout=0.25)
-    fout = next(files) if files else None
+    interval = 1
+    scheduler = n23.Scheduler(interval, timeout=0.25)
 
-    if replay:
-        logger.info('replaying a data file {}'.format(replay))
-        fin = h5py.File(replay)
+    dlog = None
+    if files:
+        fout = h5py.File(next(files), 'w')
+        dlog = n23.DLog(fout, interval, n_chunk=60, debug=True)
+        scheduler.debug = dlog
+        scheduler.add_observer(dlog.notify)
 
-        # for each sensor
-        for name in sensors:
-            data_log = n23.data_logger(fout, name, 60) if fout else None
-            consume = n23.split(topic.put_nowait, data_log)
-            scheduler.add(name, replay_file(fin, name), consume)
-    else:
-        import btzen
+    items = sensor_replay(replay, sensors) if replay \
+        else sensor_tag(device, sensors)
 
-        logger.info('connecting to sensor {}'.format(device))
-        dev = btzen.connect(device)
-        read_temp = btzen.Temperature(dev)
-        read_pressure = btzen.Pressure(dev)
-        read_hum = btzen.Humidity(dev)
-        read_light = btzen.Light(dev)
+    for name, read in items:
+        if dlog:
+            dlog.add(name)
+        consume = n23.split(topic.put_nowait, dlog)
+        scheduler.add(name, read, consume)
 
-        logger.info('connected to sensor {}'.format(device))
-
-        readers = {
-            'temperature': read_temp,
-            'pressure': read_pressure,
-            'humidity': read_hum,
-            'light': read_light,
-        }
-        items = ((k, v) for k, v in readers.items() if k in sensors)
-        for name, reader in items:
-            data_log = n23.data_logger(fout, name, 60) if fout else None
-            consume = n23.split(topic.put_nowait, data_log)
-            scheduler.add(name, reader.read, consume)
-
-
-    tasks = [scheduler()]
+    tasks = [scheduler]
     if channel:
         p = publish(topic, channel)
         tasks.append(p)
@@ -104,7 +99,39 @@ def workflow(topic, device, sensors, files=None, channel=None,
         t = cache_data(topic.get, cache)
         tasks.append(t)
 
-    return asyncio.gather(*tasks)
+    try:
+        yield asyncio.gather(*tasks)
+    finally:
+        scheduler.close()
+        dlog.close()
+        fout.close()
 
+
+def sensor_replay(fin, sensors):
+    reader = functools.partial(replay_file, fin)
+    items = ((s, reader(s)) for s in sensors)
+    return items
+
+
+def sensor_tag(device, sensors):
+    import btzen
+
+    logger.info('connecting to sensor {}'.format(device))
+    dev = btzen.connect(device)
+    read_temp = btzen.Temperature(dev)
+    read_pressure = btzen.Pressure(dev)
+    read_hum = btzen.Humidity(dev)
+    read_light = btzen.Light(dev)
+
+    logger.info('connected to sensor {}'.format(device))
+
+    readers = {
+        'temperature': read_temp,
+        'pressure': read_pressure,
+        'humidity': read_hum,
+        'light': read_light,
+    }
+    items = ((k, v.read) for k, v in readers.items() if k in sensors)
+    return items
 
 # vim: sw=4:et:ai

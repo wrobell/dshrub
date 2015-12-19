@@ -70,18 +70,18 @@ def replay_file(f, sensor):
     :param f: HDF file object.
     :param sensor: Sensor name.
     """
-    data = itertools.cycle(f[sensor + '/data'])
-    return lambda: float(next(data)[0])
+    data = itertools.cycle(f[sensor])
+    return lambda: float(next(data))
 
 
 def read_data(fn, sensors, n, data):
     f = h5py.File(fn)
+    start = f.attrs.start
     for name in sensors:
-        ts = f[name + '/event_time'][-n:]
-        ds = f[name + '/data'][-n:]
+        ds = f[name][-n:]
         data[name].extend(
-            [float(t[0]), float(v[0])] for t, v in zip(ts, ds)
-            if not math.isnan(t[0])
+            [start + t, float(v)] for t, v in enumerate(ds)
+            if not math.isnan(v)
         )
     f.close()
 

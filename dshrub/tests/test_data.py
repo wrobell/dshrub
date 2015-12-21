@@ -50,11 +50,11 @@ def test_data_cache_store_limit():
     Test data cache storing no more than max size items.
     """
     cache = Cache(['n'], 2) # store just two items
-    cache.add(Data('n', 1, 10, 101))
-    cache.add(Data('n', 1, 11, 102))
-    cache.add(Data('n', 1, 12, 103))
-    cache.add(Data('n', 1, 13, 104))
-    assert [(12, 103), (13, 104)] == list(cache['n'])
+    cache.add(Data('n', 10, 1001, 101))
+    cache.add(Data('n', 11, 1002, 102))
+    cache.add(Data('n', 12, 1003, 103))
+    cache.add(Data('n', 13, 1004, 104))
+    assert [(1003, 103), (1004, 104)] == list(cache['n'])
 
 
 def test_data_cache_store_item():
@@ -62,8 +62,8 @@ def test_data_cache_store_item():
     Test data cache storing `n23.Data` item.
     """
     cache = Cache(['n'])
-    cache.add(Data('n', 1, 10, 101))
-    assert [(10, 101)] == list(cache['n'])
+    cache.add(Data('n', 10, 1001, 101))
+    assert [(1001, 101)] == list(cache['n'])
 
 
 def test_data_cache_store_dict():
@@ -71,8 +71,8 @@ def test_data_cache_store_dict():
     Test data cache storing dictionary item.
     """
     cache = Cache(['n'])
-    cache.add({'name': 'n', 'time': 10, 'value': 101})
-    assert [(10, 101)] == list(cache['n'])
+    cache.add({'name': 'n', 'clock': 10, 'time': 1001, 'value': 101})
+    assert [(1001, 101)] == list(cache['n'])
 
 
 def test_data_cache_store_list():
@@ -80,9 +80,9 @@ def test_data_cache_store_list():
     Test data cache storing list of items.
     """
     cache = Cache(['n'])
-    cache.add({'name': 'n', 'time': 10, 'value': 101})
-    cache.add(Data('n', 1, 11, 102))
-    assert [(10, 101), (11, 102)] == list(cache['n'])
+    cache.add({'name': 'n', 'clock': 10, 'time': 1001, 'value': 101})
+    cache.add(Data('n', 11, 1002, 102))
+    assert [(1001, 101), (1002, 102)] == list(cache['n'])
 
 
 def test_cache_data():
@@ -92,8 +92,8 @@ def test_cache_data():
     topic = Topic()
     cache = Cache(['test-sensor'])
     values = [
-        Data('test-sensor', 0, 10, 101),
-        Data('test-sensor', 0, 11, 102),
+        Data('test-sensor', 10, 1001, 101),
+        Data('test-sensor', 11, 1002, 102),
     ]
 
     with patch_async(topic, 'get') as f:
@@ -101,7 +101,7 @@ def test_cache_data():
         coro = cache_data(f, cache)
         run_coroutine(coro)
 
-    assert [(10, 101), (11, 102)] == list(cache['test-sensor'])
+    assert [(1001, 101), (1002, 102)] == list(cache['test-sensor'])
 
 
 # vim: sw=4:et:ai

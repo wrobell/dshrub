@@ -57,7 +57,7 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
         dbus_loop = DBusGMainLoop(set_as_default=True)
         dbus_main_loop = GObject.MainLoop()
         dbus_bus = dbus.SystemBus(mainloop=dbus_loop)
-        thread = threading.Thread(target=dbus_main_loop.run)
+        thread = threading.Thread(target=dbus_main_loop.run, daemon=True)
         thread.start()
 
     files = None

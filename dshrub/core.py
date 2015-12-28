@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
         channel=None, replay=None):
 
+    dbus_loop = None
     topic = n23.Topic()
 
     if dashboard:
@@ -48,6 +49,16 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
     if replay:
         logger.info('replaying a data file {}'.format(replay))
         replay = h5py.File(replay)
+    else:
+        import dbus
+        import threading
+        from dbus.mainloop.glib import DBusGMainLoop
+        from gi.repository import GObject
+        dbus_loop = DBusGMainLoop(set_as_default=True)
+        dbus_main_loop = GObject.MainLoop()
+        dbus_bus = dbus.SystemBus(mainloop=dbus_loop)
+        thread = threading.Thread(target=dbus_main_loop.run)
+        thread.start()
 
     files = None
     if data_dir:
@@ -55,7 +66,7 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
 
     w = n23.cycle(
         rotate, workflow, topic, device, sensors, files=files,
-        channel=channel, replay=replay, cache=cache
+        channel=channel, replay=replay, cache=cache, dbus_bus=dbus_bus
     )
     loop = asyncio.get_event_loop()
     loop.add_signal_handler(signal.SIGTERM, sys.exit)
@@ -68,10 +79,10 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
 
 @contextmanager
 def workflow(topic, device, sensors, files=None, channel=None,
-        replay=None, cache=None):
+        replay=None, cache=None, dbus_bus=None):
 
-    interval = 1
-    scheduler = n23.Scheduler(interval, timeout=0.25)
+    interval = 2
+    scheduler = n23.Scheduler(interval, timeout=1.25)
 
     dlog = None
     if files:
@@ -81,7 +92,7 @@ def workflow(topic, device, sensors, files=None, channel=None,
         scheduler.add_observer(dlog.notify)
 
     items = sensor_replay(replay, sensors) if replay \
-        else sensor_tag(device, sensors)
+        else sensor_tag(dbus_bus, device, sensors)
 
     for name, read in items:
         if dlog:
@@ -113,15 +124,15 @@ def sensor_replay(fin, sensors):
     return items
 
 
-def sensor_tag(device, sensors):
+def sensor_tag(bus, device, sensors):
     import btzen
 
     logger.info('connecting to sensor {}'.format(device))
-    dev = btzen.connect(device)
-    read_temp = btzen.Temperature(dev)
-    read_pressure = btzen.Pressure(dev)
-    read_hum = btzen.Humidity(dev)
-    read_light = btzen.Light(dev)
+    dev = btzen.connect(bus, device)
+    read_temp = btzen.Temperature(bus, dev)
+    read_pressure = btzen.Pressure(bus, dev)
+    read_hum = btzen.Humidity(bus, dev)
+    read_light = btzen.Light(bus, dev)
 
     logger.info('connected to sensor {}'.format(device))
 
@@ -131,7 +142,7 @@ def sensor_tag(device, sensors):
         'humidity': read_hum,
         'light': read_light,
     }
-    items = ((k, v.read) for k, v in readers.items() if k in sensors)
+    items = ((k, v.read_async) for k, v in readers.items() if k in sensors)
     return items
 
 # vim: sw=4:et:ai

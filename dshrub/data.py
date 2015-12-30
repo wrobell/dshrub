@@ -32,7 +32,7 @@ from n23 import Data
 from scipy.stats import binned_statistic
 
 # how much data items to keep in memory per sensor, default 24h of data
-N_DATA = 3600 * 24
+N_DATA = 3600 * 24 // 4
 
 def bin_data(data, agg, bins):
     """

@@ -21,6 +21,7 @@ import asyncio
 import functools
 import h5py
 import logging
+import operator
 import signal
 import sys
 from contextlib import contextmanager
@@ -81,8 +82,8 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
 def workflow(topic, device, sensors, files=None, channel=None,
         replay=None, cache=None, dbus_bus=None):
 
-    interval = 2
-    scheduler = n23.Scheduler(interval, timeout=1.25)
+    interval = 4
+    scheduler = n23.Scheduler(interval, timeout=1.5)
 
     dlog = None
     if files:
@@ -96,8 +97,19 @@ def workflow(topic, device, sensors, files=None, channel=None,
 
     for name, read in items:
         if dlog:
-            dlog.add(name)
-        consume = n23.split(topic.put_nowait, dlog)
+            n_col = 3 if name == 'accelerometer' else None
+            dlog.add(name, n_col=n_col)
+
+        @n23.coroutine
+        def calc(callback):
+            import math
+            while True:
+                item = yield
+                value = math.sqrt(sum(v ** 2 for v in item.value))
+                item = item._replace(value=value)
+                callback(item)
+        pt = calc(topic.put_nowait) if name == 'accelerometer' else topic.put_nowait
+        consume = n23.split(pt, dlog)
         scheduler.add(name, read, consume)
 
     tasks = [scheduler]
@@ -129,10 +141,16 @@ def sensor_tag(bus, device, sensors):
 
     logger.info('connecting to sensor {}'.format(device))
     dev = btzen.connect(bus, device)
-    read_temp = btzen.Temperature(bus, dev)
-    read_pressure = btzen.Pressure(bus, dev)
-    read_hum = btzen.Humidity(bus, dev)
-    read_light = btzen.Light(bus, dev)
+    read_temp = btzen.Temperature(bus, dev).read_async
+    read_pressure = btzen.Pressure(bus, dev).read_async
+    read_hum = btzen.Humidity(bus, dev).read_async
+    read_light = btzen.Light(bus, dev).read_async
+    read_motion = btzen.Motion(bus, dev).read_async
+
+    getter = operator.itemgetter(3, 4, 5)
+    async def read_accel():
+        v = await read_motion()
+        return getter(v)
 
     logger.info('connected to sensor {}'.format(device))
 
@@ -141,8 +159,9 @@ def sensor_tag(bus, device, sensors):
         'pressure': read_pressure,
         'humidity': read_hum,
         'light': read_light,
+        'accelerometer': read_accel,
     }
-    items = ((k, v.read_async) for k, v in readers.items() if k in sensors)
+    items = ((k, f) for k, f in readers.items() if k in sensors)
     return items
 
 # vim: sw=4:et:ai

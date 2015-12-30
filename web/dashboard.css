@@ -42,3 +42,7 @@ div.data-plot#panel-light div.title::before {
 div.data-plot#panel-light > div > div.value {
     font-size: 48px;
 }
+
+div.data-plot#panel-accelerometer div.title::before {
+    content: 'Accelerometer [G]';
+}

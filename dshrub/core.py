@@ -83,7 +83,7 @@ def workflow(topic, device, sensors, files=None, channel=None,
         replay=None, cache=None, dbus_bus=None):
 
     interval = 4
-    scheduler = n23.Scheduler(interval, timeout=1.5)
+    scheduler = n23.Scheduler(interval, timeout=2)
 
     dlog = None
     if files:
@@ -97,8 +97,10 @@ def workflow(topic, device, sensors, files=None, channel=None,
 
     for name, read in items:
         if dlog:
-            n_col = 3 if name == 'accelerometer' else None
-            dlog.add(name, n_col=n_col)
+            shape = ()
+            if name == 'accelerometer':
+                shape += (3,)
+            dlog.add(name, shape=shape)
 
         @n23.coroutine
         def calc(callback):
@@ -139,29 +141,19 @@ def sensor_replay(fin, sensors):
 def sensor_tag(bus, device, sensors):
     import btzen
 
-    logger.info('connecting to sensor {}'.format(device))
     dev = btzen.connect(bus, device)
-    read_temp = btzen.Temperature(bus, dev).read_async
-    read_pressure = btzen.Pressure(bus, dev).read_async
-    read_hum = btzen.Humidity(bus, dev).read_async
-    read_light = btzen.Light(bus, dev).read_async
-    read_motion = btzen.Motion(bus, dev).read_async
-
-    getter = operator.itemgetter(3, 4, 5)
-    async def read_accel():
-        v = await read_motion()
-        return getter(v)
-
     logger.info('connected to sensor {}'.format(device))
 
     readers = {
-        'temperature': read_temp,
-        'pressure': read_pressure,
-        'humidity': read_hum,
-        'light': read_light,
-        'accelerometer': read_accel,
+        'temperature': btzen.Temperature,
+        'pressure': btzen.Pressure,
+        'humidity': btzen.Humidity,
+        'light': btzen.Light,
+        'accelerometer': btzen.Accelerometer,
     }
-    items = ((k, f) for k, f in readers.items() if k in sensors)
-    return items
+    items = [(n, cls(bus, dev)) for n, cls in readers.items() if n in sensors]
+    for n, s in items:
+        s.set_interval(2)
+    return ((n, s.read_async) for n, s in items)
 
 # vim: sw=4:et:ai

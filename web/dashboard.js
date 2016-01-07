@@ -48,7 +48,7 @@ function plot_add_item(plot, item) {
 
 function panel_set_item_value(name, item) {
     $('div#panel-' + name + ' div.value').html(
-        Math.round(item['value'] * 10) / 10
+        Math.round(item['value'] * 1000) / 1000
     );
 }
 

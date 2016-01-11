@@ -6,8 +6,8 @@ div.data-plot > div > div.value {
     text-align: center;
     margin-top: auto;
     margin-bottom: auto;
-    width: 160;
-    font-size: 64px;
+    width: 160px;
+    font-size: 48px;
 }
 
 div.data-plot div.plot {
@@ -27,9 +27,6 @@ div.data-plot#panel-temperature div.title::before {
 div.data-plot#panel-pressure div.title::before {
     content: 'Pressure [Pa]';
 }
-div.data-plot#panel-pressure > div > div.value {
-    font-size: 48px;
-}
 
 div.data-plot#panel-humidity div.title::before {
     content: 'Humidity [%RH]';
@@ -37,10 +34,6 @@ div.data-plot#panel-humidity div.title::before {
 
 div.data-plot#panel-light div.title::before {
     content: 'Light [lx]';
-}
-
-div.data-plot#panel-light > div > div.value {
-    font-size: 48px;
 }
 
 div.data-plot#panel-accelerometer div.title::before {

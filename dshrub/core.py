@@ -82,8 +82,8 @@ def start(device, sensors, dashboard=None, data_dir=None, rotate=None,
 def workflow(topic, device, sensors, files=None, channel=None,
         replay=None, cache=None, dbus_bus=None):
 
-    interval = 4
-    scheduler = n23.Scheduler(interval, timeout=2)
+    interval = 1
+    scheduler = n23.Scheduler(interval)
 
     dlog = None
     if files:
@@ -153,7 +153,7 @@ def sensor_tag(bus, device, sensors):
     }
     items = [(n, cls(bus, dev)) for n, cls in readers.items() if n in sensors]
     for n, s in items:
-        s.set_interval(2)
+        s.set_interval(1)
     return ((n, s.read_async) for n, s in items)
 
 # vim: sw=4:et:ai
